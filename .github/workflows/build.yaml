@@ -50,6 +50,7 @@ jobs:
       shell: bash
       run: |
         mkdir -p dist/bin
+        nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command ghc --version
         nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command cabal install kupo:exe:kupo --flags +production --installdir=dist/bin --install-method=copy
 
     - name: Check Dependencies Linking
