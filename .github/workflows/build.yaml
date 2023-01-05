@@ -1,40 +1,59 @@
 name: Build
 
 on:
-  pull_request:
-    branches: [ "master" ]
   push:
-    branches: [ "master" ]
-    tags: [ "*.*.*" ]
+    branches: [ "devx-static" ]
 
 jobs:
-  nix:
-    runs-on: ubuntu-latest
-    steps:
+  devx:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [ghc8107-static-minimal]
 
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v2.3.3
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v3
       with:
         submodules: true
 
-    - name: ❄️  Install Nix
-      uses: cachix/install-nix-action@v13
+    - uses: actions/cache@v3
       with:
-        nix_path: nixpkgs=channel:nixos-unstable
+        path: |
+          ~/.cabal/packages
+          ~/.cabal/store
+          dist-newstyle
+        key: |
+          cabal-${{ matrix.os }}-${{ hashFiles('cabal.project') }}
+        restore-keys: |
+          cabal-${{ matrix.os }}-${{ hashFiles('cabal.project') }}
+
+    - uses: cachix/install-nix-action@v17
+      with:
         extra_nix_config: |
-          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-          substituters = https://cache.iog.io https://cache.nixos.org
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+          substituters = https://cache.iog.io/ https://cache.zw3rk.com/ https://cache.nixos.org/
 
-    - name: 💾 Cache Build
-      uses: cachix/cachix-action@v12
-      with:
-        name: kupo
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - name: Prepare dev shell
+      run: nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command cabal update
+      shell: bash
 
-    - name: 🔨 Build
-      run: nix-shell -p pandoc --keep GIT_SHA --command make
-      env:
-        GIT_SHA: ${{ github.sha }}
+    - name: Build project
+      run: |
+        mkdir -p dist/bin
+        nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command cabal install kupo:exe:kupo --flags +production --installdir=dist/bin --install-method=copy
+      shell: bash
+
+    - name: Check Dependencies Linking
+      if: ${{ runner.os == 'Linux' }}
+      run: |
+        ldd dist/bin/kupo
+
+    - name: Check Dependencies Linking
+      if: ${{ runner.os == 'macOS' }}
+      run: |
+        otool -L dist/bin/kupo
 
     - name: 📎 Upload Artifact
       uses: actions/upload-artifact@v2
@@ -42,4 +61,3 @@ jobs:
         name: kupo-${{ github.sha }}-${{ runner.arch }}-${{ runner.os }}
         path: |
           dist/bin
-          dist/share
