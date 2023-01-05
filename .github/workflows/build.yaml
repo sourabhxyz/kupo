@@ -36,22 +36,31 @@ jobs:
           substituters = https://cache.iog.io/ https://cache.zw3rk.com/ https://cache.nixos.org/
 
     - name: Prepare dev shell
-      run: nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command cabal update
       shell: bash
+      run: nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command cabal update
+
+    - name: Patch cabal.project
+      if: ${{ runner.os == 'macOS' }}
+      shell: bash
+      run: |
+        nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command echo "$CABAL_PROJECT_LOCAL_TEMPLATE" > cabal.project.local
+        cat cabal.project.local
 
     - name: Build project
+      shell: bash
       run: |
         mkdir -p dist/bin
         nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command cabal install kupo:exe:kupo --flags +production --installdir=dist/bin --install-method=copy
-      shell: bash
 
     - name: Check Dependencies Linking
       if: ${{ runner.os == 'Linux' }}
+      shell: bash
       run: |
         ldd dist/bin/kupo
 
     - name: Check Dependencies Linking
       if: ${{ runner.os == 'macOS' }}
+      shell: bash
       run: |
         otool -L dist/bin/kupo
 

@@ -41,23 +41,20 @@ allow-newer:
 
 constraints:
   -- Haskell packages
-  , algebraic-graphs < 0.7
+  , algebraic-graphs == 0.6.1
+  , base == 4.14.3.0
   , base-deriving-via == 0.1.0.0
-  , bimap >= 0.4.0
-  , direct-sqlite >= 2.3.27
-  , graphviz >= 2999.20.1.0
-  , hedgehog >= 1.1
-  , HSOpenSSL >= 0.11.7.2
-  , libsystemd-journal >= 1.4.4
+  , bimap == 0.4.0
+  , graphviz == 2999.20.1.0
+  , hedgehog == 1.2
   , measures == 0.1.0.0
-  , network >= 3.1.1.0
+  , network == 3.1.2.7
   , orphans-deriving-via == 0.1.0.0
   , prettyprinter-configurable == 0.1.0.0
-  , protolude < 0.3.1
+  , protolude == 0.3.0
   , relude == 0.7.0.0
   , resource-pool == 0.3.1.0
   , strict-containers == 0.1.0.0
-  , systemd >= 2.3.0
   , word-array == 0.1.0.0
 
   -- Cardano packages
@@ -70,10 +67,8 @@ constraints:
   , cardano-prelude == 0.1.0.0
   , cardano-slotting  == 0.1.0.0
   , plutus-core == 1.0.0.1
-  , plutus-ghc-stub == 8.6.5
   , plutus-ledger-api == 1.0.0.1
   , plutus-tx == 1.0.0.0
-  , plutus-tx-plugin == 1.0.0.0
 
 source-repository-package
   type: git
