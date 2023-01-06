@@ -8,8 +8,7 @@ jobs:
   devx:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        compiler: [ghc8107-static-minimal]
+        os: [ubuntu-latest] # , macos-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -35,23 +34,18 @@ jobs:
           trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
           substituters = https://cache.iog.io/ https://cache.zw3rk.com/ https://cache.nixos.org/
 
-    - name: Prepare dev shell
-      shell: bash
-      run: nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command cabal update
-
-    - name: Patch cabal.project
-      if: ${{ runner.os == 'macOS' }}
-      shell: bash
+    - name: Build
+      shell: nix develop github:input-output-hk/devx#ghc8107-static-minimal --command "bash <(echo 'eval \"$shellHook\"; {0}')"
       run: |
-        nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command echo "$CABAL_PROJECT_LOCAL_TEMPLATE" > cabal.project.local
-        cat cabal.project.local
+        cabal update
+        cabal install kupo:exe:kupo --flags +production --installdir=dist/bin --install-method=copy
 
-    - name: Build project
-      shell: bash
-      run: |
-        mkdir -p dist/bin
-        nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command ghc --version
-        nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command cabal install kupo:exe:kupo --flags +production --installdir=dist/bin --install-method=copy
+#    - name: Patch cabal.project
+#      if: ${{ runner.os == 'macOS' }}
+#      shell: bash
+#      run: |
+#        nix develop github:input-output-hk/devx#${{ matrix.compiler }} --no-write-lock-file --command echo "$CABAL_PROJECT_LOCAL_TEMPLATE" > cabal.project.local
+#        cat cabal.project.local
 
     - name: Check Dependencies Linking
       if: ${{ runner.os == 'Linux' }}
