@@ -35,10 +35,8 @@ jobs:
           substituters = https://cache.iog.io/ https://cache.zw3rk.com/ https://cache.nixos.org/
 
     - name: Build
-      shell: nix develop github:input-output-hk/devx#ghc8107-static-minimal --command "bash <(echo 'eval \"$shellHook\"; {0}')"
       run: |
-        cabal update
-        cabal install kupo:exe:kupo --flags +production --installdir=dist/bin --install-method=copy
+        nix develop github:input-output-hk/devx#ghc8107-static-minimal --no-write-lock-file -c bash <(echo 'eval "$shellHook"; cabal update; cabal install kupo:exe:kupo --flags +production --installdir=dist/bin --install-method=copy')
 
 #    - name: Patch cabal.project
 #      if: ${{ runner.os == 'macOS' }}
