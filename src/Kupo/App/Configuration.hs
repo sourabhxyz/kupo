@@ -215,6 +215,9 @@ data TraceConfiguration where
     ConfigurationOgmios
         :: { ogmiosHost :: String, ogmiosPort :: Int }
         -> TraceConfiguration
+    ConfigurationHydra
+        :: { hydraHost :: String, hydraPort :: Int }
+        -> TraceConfiguration
     ConfigurationCardanoNode
         :: { nodeSocket :: FilePath, nodeConfig :: FilePath }
         -> TraceConfiguration
@@ -237,6 +240,7 @@ instance HasSeverityAnnotation TraceConfiguration where
     getSeverityAnnotation = \case
         ConfigurationNetwork{} -> Info
         ConfigurationOgmios{} -> Info
+        ConfigurationHydra{} -> Info
         ConfigurationCardanoNode{} -> Info
         ConfigurationPatterns{} -> Info
         ConfigurationCheckpointsForIntersection{} -> Info

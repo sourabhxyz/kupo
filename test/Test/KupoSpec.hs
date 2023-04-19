@@ -190,7 +190,6 @@ varHydraPort = "HYDRA_PORT"
 
 spec :: Spec
 spec = do
-
   hydraContext "Hydra <> Kupo" $ do
     specify "can connect" $ \(_, tr, cfg, HttpClient{..}, dumpLogs) -> do
         env <- newEnvironment $ cfg
