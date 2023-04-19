@@ -182,8 +182,31 @@ varOgmiosHost = "OGMIOS_HOST"
 varOgmiosPort :: String
 varOgmiosPort = "OGMIOS_PORT"
 
+varHydraHost :: String
+varHydraHost = "HYDRA_HOST"
+
+varHydraPort :: String
+varHydraPort = "HYDRA_PORT"
+
 spec :: Spec
-spec = skippableContext "End-to-end" $ do
+spec = do
+
+  hydraContext "Hydra <> Kupo" $ do
+    specify "can connect" $ \(_, tr, cfg, HttpClient{..}, dumpLogs) -> do
+        env <- newEnvironment $ cfg
+            { workDir = InMemory
+            , since = Just GenesisPoint
+            , patterns = fromList [MatchAny OnlyShelley]
+            }
+        timeoutOrThrow 30 dumpLogs $ race_
+            (kupo tr `runWith` env)
+            (do
+                waitSlot (> 1)
+                matches <- getAllMatches NoStatusFlag
+                matches `shouldSatisfy` not . null
+            )
+
+  skippableContext "End-to-end" $ do
     specify "in-memory" $ \(_, tr, cfg, HttpClient{..}, dumpLogs) -> do
         env <- newEnvironment $ cfg
             { workDir = InMemory
@@ -604,23 +627,48 @@ skippableContext prefix skippableSpec = do
             context ogmios $ around (withTempDirectory manager ref defaultCfg) skippableSpec
         _skipOtherwise ->
             xcontext ogmios (pure ())
-  where
-    withTempDirectory
-        :: Manager
-        -> TVar IO Int
-        -> Configuration
-        -> ((FilePath, Tracers IO 'Concrete, Configuration, HttpClient IO, IO ()) -> IO ())
-        -> IO ()
-    withTempDirectory manager ref cfg action = do
-        serverPort <- atomically $ stateTVar ref $ \port -> (port, next port)
-        httpLogs <- newTVarIO []
-        let writeLogs = atomically . modifyTVar' httpLogs . (:)
-        let httpClient = newHttpClientWith manager (serverHost cfg, serverPort) writeLogs
-        withSystemTempDirectory "kupo-end-to-end" $ \dir -> do
-            withTempFile dir "traces" $ \_ h ->
-                withTracers h version (defaultTracers (Just Info)) $ \tr ->
-                    action (dir, tr, cfg { serverPort }, httpClient, dumpLogs httpLogs)
 
+hydraContext :: String -> EndToEndSpec -> Spec
+hydraContext prefix skippableSpec = do
+    ref <- runIO $ newTVarIO 1442
+    let hydra = prefix <> " (hydra)"
+    runIO ((,) <$> lookupEnv varHydraHost <*> lookupEnv varHydraPort) >>= \case
+        (Just _hydraHost, Just _hydraPort) -> do
+            manager <- runIO $ newManager $
+                defaultManagerSettings { managerResponseTimeout = responseTimeoutNone }
+            let defaultCfg = Configuration
+                    { chainProducer = Hydra
+                    , workDir = InMemory
+                    , serverHost = "127.0.0.1"
+                    , serverPort = 0
+                    , since = Nothing
+                    , patterns = fromList []
+                    , inputManagement = MarkSpentInputs
+                    , longestRollback = 43200
+                    , garbageCollectionInterval = 180
+                    , maxConcurrency = 50
+                    , deferIndexes = InstallIndexesIfNotExist
+                    }
+            context hydra $ around (withTempDirectory manager ref defaultCfg) skippableSpec
+        _skipOtherwise ->
+            xcontext hydra (pure ())
+
+withTempDirectory
+    :: Manager
+    -> TVar IO Int
+    -> Configuration
+    -> ((FilePath, Tracers IO 'Concrete, Configuration, HttpClient IO, IO ()) -> IO ())
+    -> IO ()
+withTempDirectory manager ref cfg action = do
+    serverPort <- atomically $ stateTVar ref $ \port -> (port, next port)
+    httpLogs <- newTVarIO []
+    let writeLogs = atomically . modifyTVar' httpLogs . (:)
+    let httpClient = newHttpClientWith manager (serverHost cfg, serverPort) writeLogs
+    withSystemTempDirectory "kupo-end-to-end" $ \dir -> do
+        withTempFile dir "traces" $ \_ h ->
+            withTracers h version (defaultTracers (Just Info)) $ \tr ->
+                action (dir, tr, cfg { serverPort }, httpClient, dumpLogs httpLogs)
+  where
     dumpLogs :: TVar IO [Text] -> IO ()
     dumpLogs logs = do
         xs <- reverse <$> atomically (readTVar logs)

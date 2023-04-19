@@ -112,6 +112,7 @@ data ChainProducer
         { ogmiosHost :: !String
         , ogmiosPort :: !Int
         }
+    | Hydra
     deriving (Generic, Eq, Show)
 
 -- | Database working directory. 'in-memory' runs the database in hot memory,
