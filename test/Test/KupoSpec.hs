@@ -197,7 +197,7 @@ spec = do
             , since = Just GenesisPoint
             , patterns = fromList [MatchAny OnlyShelley]
             }
-        timeoutOrThrow 30 dumpLogs $ race_
+        timeoutOrThrow 5 dumpLogs $ race_
             (kupo tr `runWith` env)
             (do
                 waitSlot (> 1)
